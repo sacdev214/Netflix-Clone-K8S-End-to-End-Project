@@ -15,7 +15,7 @@ pipeline{
         }
         stage('Checkout from Git'){
             steps{
-                git branch: 'master', url: 'https://github.com/AmanPathak-DevOps/Netflix-Clone-K8S-End-to-End-Project.git'
+                git branch: 'master', url: 'https://github.com/sacdev214/Netflix-Clone-K8S-End-to-End-Project.git'
             }
         }
         stage("Sonarqube Analysis"){
@@ -50,38 +50,31 @@ pipeline{
                 sh "trivy fs . > trivyfs.txt"
             }
         }
-        stage("Docker Image Build"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker system prune -f"
-                       sh "docker container prune -f"
-                       sh "docker build --build-arg TMDB_V3_API_KEY=8b174e589e2f03f9fd8123907bd7800c -t netflix ."
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker' , toolName: 'docker') {
+                        sh "docker build --build-arg TMDB_V3_API_KEY=d0af5a6d9380f9a68e1573f5e3716794 -t netflix ."
+                        sh "docker tag netflix sachdevopscloud/netflix:latest"
+                        sh "docker push sachdevopscloud/netflix:latest "
+
                     }
                 }
             }
+        
         }
-        stage("Docker Image Pushing"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
-                       sh "docker tag netflix avian19/netflix:latest "
-                       sh "docker push avian19/netflix:latest "
-                    }
-                }
+        stage("TRIVY") {
+            steps {
+                sh "trivy image sachdevopscloud/netflix:latest > trivyimage.txt"
             }
         }
-        stage("TRIVY Image Scan"){
-            steps{
-                sh "trivy image avian19/netflix:latest > trivyimage.txt" 
-            }
-        }
+        
         stage('Deploy to Kubernetes'){
             steps{
                 script{
                     dir('Kubernetes') {
                         withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8s', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
-                                sh 'kubectl apply -f deployment.yml'
+                                sh 'kubectl apply -f deployment.yml --validate=false'
                                 sh 'kubectl apply -f service.yml'
                                 sh 'kubectl get svc'
                                 sh 'kubectl get all'
@@ -98,7 +91,7 @@ pipeline{
             body: "Project: ${env.JOB_NAME}<br/>" +
                 "Build Number: ${env.BUILD_NUMBER}<br/>" +
                 "URL: ${env.BUILD_URL}<br/>",
-            to: 'aman07pathak@gmail.com',
+            to: 'agarwalsachin561@gmail.com',
             attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
         }
     }
